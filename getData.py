@@ -2,8 +2,9 @@ import quandl
 import json
 import pandas as pd
 import pandas_datareader as pdr
+import pandas_datareader.data as web
 
-quandl.ApiConfig.api_key = 'aTMpLm4QMGMY1Vxs4HJM'
+quandl.ApiConfig.api_key = ''
 
 try:
     with open('sf0-tickers.json', 'r') as json_tickers:
@@ -77,9 +78,12 @@ def getDatesFromDF(dataframe):
     return [getDateFromTimestamp(i) for i in dataframe.index]
 
 def getHistoricalPrices(ticker):
-    return pdr.get_data_yahoo('{}'.format(ticker))['Adj Close'] # Returns data series of stock prices
+    try:
+        return pdr.get_data_yahoo('{}'.format(ticker))['Adj Close'] # Returns data series of stock prices
+    except:
+        return pdr.get_data_yahoo('{}'.format(ticker[:-1] + '-' + ticker[-1]))['Adj Close']
 
-def getPricesForDates(historical_prices, dates): # Get average stock prices for the months in dates 
+def getPricesForDates(historical_prices, dates): # Get average stock prices for the months in dates
     average_prices = []
     for date in dates:
         try:
@@ -126,11 +130,33 @@ except:
 def predictPrices(earnings_estimates):
     Predicted_Prices = {}
     for stock in earnings_estimates:
-        forwardEPS = earnings_estimates[stock]
-        Predicted_Prices[stock] = findAvgPE(stock) * forwardEPS
+        try:
+            forwardEPS = earnings_estimates[stock]
+            Predicted_Prices[stock] = findAvgPE(stock) * forwardEPS
+        except:
+            pass
     with open('PredictedPrices.json', 'w') as saveFile:
-        json.dump(PredictedPrices, saveFile)
+        json.dump(Predicted_Prices, saveFile)
     return Predicted_Prices
+
+
+try:
+    with open('PredictedPrices.json', 'r') as json_PredictedPrices:
+        Predicted_Prices = json.load(json_PredictedPrices)
+    print('Predicted Prices successfully loaded')
+except:
+    print('Creating dictionary of Predicted Prices...')
+    try:
+        Predicted_Prices = predictPrices(Earnings_Estimates)
+        print('Predicted Prices dictionary successfully created')
+    except:
+        print('Failed to create Predicted Prices dictionary')
+
+
+def getLatestPrice(ticker):
+    return web.get_quote_yahoo('{}'.format(ticker))['last'][0]
+
+
 
 
 # from time import sleep
