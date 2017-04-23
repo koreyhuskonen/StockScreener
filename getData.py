@@ -153,18 +153,37 @@ except:
         print('Failed to create Predicted Prices dictionary')
 
 
-def getLatestPrice(ticker):
+def getLatestPrice(ticker): # Get the latest stock price
     return web.get_quote_yahoo('{}'.format(ticker))['last'][0]
 
+def getReturns(predicted_prices): # Calculate the projected return of each stock in predicted_prices
+    Projected_Returns = {}
+    for stock in predicted_prices:
+        current_price = getLatestPrice(stock)
+        future_price = predicted_prices[stock]
+        Projected_Returns[stock] = (future_price - current_price)/current_price
+    with open('ProjectedReturns.json', 'w') as saveFile:
+        json.dump(Projected_Returns, saveFile)
+    return Projected_Returns
 
 
+try:
+    with open('ProjectedReturns.json', 'r') as json_ProjectedReturns:
+        Projected_Returns = json.load(json_ProjectedReturns)
+    print('Projected Returns successfully loaded')
+except:
+    print('Creating dictionary of Projected Returns...')
+    try:
+        Projected_Returns = getReturns(Predicted_Prices)
+        print('Projected Returns dictionary successfully created')
+    except:
+        print('Failed to create Projected Returns dictionary')
 
-# from time import sleep
-# import sys
-#
-# for i in range(21):
-#     sys.stdout.write('\r')
-#     # the exact output you're looking for:
-#     sys.stdout.write("[%-20s] %d%%" % ('='*i, 5*i))
-#     sys.stdout.flush()
-#     sleep(0.25)
+
+def findTop20(projected_returns):
+    stocks = [s for s in projected_returns]
+    top_stocks = sorted(stocks, key=lambda x: projected_returns[x])[-20:]
+    for stock in top_stocks:
+        print(stock, projected_returns[stock])
+
+findTop20(Projected_Returns)
