@@ -18,13 +18,13 @@ except:
     print('Failed to load stock tickers')
 
 
-def getEPS(ticker): # EPS = earnings per share, returns a DataFrame with percent changes in annual EPS of an individual stock
+def getEPS(ticker): # EPS = earnings per share, retrieve annual EPS data for an individual stock
     return quandl.get('SF0/{}_EPSUSD_MRY'.format(ticker)).tail(5) # Only take last 5 years
 
-def getEarningsFromDF(eps_df):
+def getEarningsFromDF(eps_df): # Collect EPS data and convert it to a list
     return eps_df['Value'].tolist()
 
-def getAvgEPSChange(eps_df):
+def getAvgEPSChange(eps_df): # Calculate the average change in annual EPS year-over-year
     eps_list = getEarningsFromDF(eps_df)
     total = 0;
     num_entries = len(eps_list)
@@ -32,8 +32,8 @@ def getAvgEPSChange(eps_df):
         total += (eps_list[i] - eps_list[i-1])/eps_list[i-1];
     return total/(num_entries-1)
 
-def checkStableGrowth(eps_df): # Takes a stock DataFrame as an input
-    eps_list = eps_df['Value'].tolist()
+def checkStableGrowth(eps_df): # Takes a stock DataFrame as input
+    eps_list = getEarningsFromDF(eps_df)
     for yearly_eps in eps_list:
         if yearly_eps <= 0: # Check whether the company has lost money recently
             return False
@@ -43,15 +43,15 @@ def checkStableGrowth(eps_df): # Takes a stock DataFrame as an input
             return False
     return True
 
-def filterGrowthProspects(growth_prospects):
+def filterGrowthProspects(growth_prospects): # Eliminate bad data - side effect of the data provider
     return {stock: growth_prospects[stock] for stock in growth_prospects if growth_prospects[stock] > 0}
 
-def findGrowthProspects(): # Filters stocks and then links ticker symbols with average change in annual EPS
+def findGrowthProspects(): # Filter stocks and then link ticker symbols with average change in annual EPS
     Growth_Prospects = {}
     for t in tickers:
-        eps_data = getEPS(t) # eps_data is now a DataFrame containing annual EPS
-        if checkStableGrowth(eps_data):
-            Growth_Prospects[t] = getAvgEPSChange(eps_data) # Link stock tickers with average change in annual EPS
+        eps_data = getEPS(t) # eps_data is now a DataFrame containing annual EPS for an individual stock
+        if checkStableGrowth(eps_data): # If the stock looks good, add it to Growth_Prospects
+            Growth_Prospects[t] = getAvgEPSChange(eps_data) # Link the stock's ticker with its average change in EPS
     Growth_Prospects = filterGrowthProspects(Growth_Prospects)
     with open('GrowthProspects.json', 'w') as saveFile:
         json.dump(Growth_Prospects, saveFile)
@@ -77,9 +77,9 @@ def getDateFromTimestamp(timestamp):
 def getDatesFromDF(dataframe):
     return [getDateFromTimestamp(i) for i in dataframe.index]
 
-def getHistoricalPrices(ticker):
+def getHistoricalPrices(ticker): # Look up a stock's historical prices, adjusted for splits
     try:
-        return pdr.get_data_yahoo('{}'.format(ticker))['Adj Close'] # Returns data series of stock prices
+        return pdr.get_data_yahoo('{}'.format(ticker))['Adj Close'] # Returns a Series of stock prices
     except:
         return pdr.get_data_yahoo('{}'.format(ticker[:-1] + '-' + ticker[-1]))['Adj Close']
 
@@ -89,10 +89,10 @@ def getPricesForDates(historical_prices, dates): # Get average stock prices for 
         try:
             average_prices.append(historical_prices[date].mean())
         except:
-            average_prices.append(0)
+            average_prices.append(0) # Yahoo Finance might not have prices for a given date
     return average_prices
 
-def findAvgPE(ticker):
+def findAvgPE(ticker): # PE = price-to-earnings ratio, find the average PE the stock has traded at
     eps_data = getEPS(ticker)
     earnings = getEarningsFromDF(eps_data) # List of yearly EPS
     dates = getDatesFromDF(eps_data)
@@ -101,7 +101,7 @@ def findAvgPE(ticker):
     valid_data_points = [p for p in prices if p != 0] # Find how many valid price entries we have
     return sum([prices[i]/earnings[i] for i in range(len(earnings))])/len(valid_data_points)
 
-def getLastEPS(ticker):
+def getLastEPS(ticker): # Find the stock's latest price
     return getEPS(ticker)['Value'][-1]
 
 def getForwardEarnings(growth_prospects): # Predict EPS in 5 years, needs dictionary with average EPS change
@@ -127,7 +127,7 @@ except:
         print('Failed to create Earnings Estimates dictionary')
 
 
-def predictPrices(earnings_estimates):
+def predictPrices(earnings_estimates): # Predict prices in 5 years according to average PE and average change in EPS
     Predicted_Prices = {}
     for stock in earnings_estimates:
         try:
