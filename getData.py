@@ -180,10 +180,16 @@ except:
         print('Failed to create Projected Returns dictionary')
 
 
-def findTop20(projected_returns):
-    stocks = [s for s in projected_returns]
-    top_stocks = sorted(stocks, key=lambda x: projected_returns[x])[-20:]
-    for stock in top_stocks:
-        print(stock, projected_returns[stock])
+def filterByReturn(low, high): # Selects and sorts stocks with projected returns between low and high
+    stocks = [s for s in Projected_Returns if Projected_Returns[s] > low and Projected_Returns[s] < high]
+    return sorted(stocks, key=lambda x: Projected_Returns[x])
 
-findTop20(Projected_Returns)
+def displayBuyCandidates(low, high): # Displays predicted return, price, and EPS of filtered buy candidates
+    stocks = filterByReturn(low, high)
+    d = {}
+    d['Return'] = [Projected_Returns[s] for s in stocks]
+    d['Price'] = [Predicted_Prices[s] for s in stocks]
+    d['EPS'] = [Earnings_Estimates[s] for s in stocks]
+    result = pd.DataFrame(d, index=stocks)
+    with pd.option_context('display.max_rows', None):
+        print(result)
