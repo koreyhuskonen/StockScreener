@@ -4,8 +4,9 @@ import pandas as pd
 import pandas_datareader as pdr
 import pandas_datareader.data as web
 
-quandl.ApiConfig.api_key = ''
+quandl.ApiConfig.api_key = '' # Need a Quandl API key, free for all registered users
 
+# First step is to get a list of all the stock tickers in the database we'll be using
 try:
     with open('sf0-tickers.json', 'r') as json_tickers:
         parsed_tickers = json.load(json_tickers) # parsed_tickers is a Python dictionary containing unnecessary stock data
@@ -101,7 +102,7 @@ def findAvgPE(ticker): # PE = price-to-earnings ratio, find the average PE the s
     valid_data_points = [p for p in prices if p != 0] # Find how many valid price entries we have
     return sum([prices[i]/earnings[i] for i in range(len(earnings))])/len(valid_data_points)
 
-def getLastEPS(ticker): # Find the stock's latest price
+def getLastEPS(ticker):
     return getEPS(ticker)['Value'][-1]
 
 def getForwardEarnings(growth_prospects): # Predict EPS in 5 years, needs dictionary with average EPS change
